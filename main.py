@@ -232,6 +232,7 @@ def get_loader(
     dev_database_path = database_path / "ASVspoof2019_{}_dev/".format(track)
     eval_database_path = database_path / "ASVspoof2019_{}_eval/".format(track)
 
+    # Lấy các đường dẫn file metadata ứng với tập train, dev và eval
     trn_list_path = (database_path /
                      "ASVspoof2019_{}_cm_protocols/{}.cm.train.trn.txt".format(
                          track, prefix_2019))
@@ -243,16 +244,20 @@ def get_loader(
         "ASVspoof2019_{}_cm_protocols/{}.cm.eval.trl.txt".format(
             track, prefix_2019))
 
+    # Từ file metadata cho tập train, lấy ra danh sách các key ứng với speech và label của nó
     d_label_trn, file_train = genSpoof_list(dir_meta=trn_list_path,
                                             is_train=True,
                                             is_eval=False)
     print("no. training files:", len(file_train))
 
+    # Từ danh sách lấy được, lập ra Dataset
     train_set = Dataset_ASVspoof2019_train(list_IDs=file_train,
                                            labels=d_label_trn,
                                            base_dir=trn_database_path)
     gen = torch.Generator()
     gen.manual_seed(seed)
+
+    # Từ dataset, lập DataLoader
     trn_loader = DataLoader(train_set,
                             batch_size=config["batch_size"],
                             shuffle=True,
@@ -261,13 +266,16 @@ def get_loader(
                             worker_init_fn=seed_worker,
                             generator=gen)
 
+    # Lấy danh sách các key và label của các speech
     _, file_dev = genSpoof_list(dir_meta=dev_trial_path,
                                 is_train=False,
                                 is_eval=False)
     print("no. validation files:", len(file_dev))
 
+    # Từ danh sách lấy được, lập ra Dataset
     dev_set = Dataset_ASVspoof2019_devNeval(list_IDs=file_dev,
                                             base_dir=dev_database_path)
+    # Từ Dataset, lập ra DataLoader
     dev_loader = DataLoader(dev_set,
                             batch_size=config["batch_size"],
                             shuffle=False,
