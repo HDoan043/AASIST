@@ -26,6 +26,7 @@ from data_utils import (Dataset_ASVspoof2019_train,
                         Dataset_ASVspoof2019_devNeval, genSpoof_list)
 from evaluation import calculate_tDCF_EER
 from utils import create_optimizer, seed_worker, set_seed, str_to_bool
+from tdqm import tdqm
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
