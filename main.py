@@ -42,7 +42,7 @@ def main(args: argparse.Namespace) -> None:
     optim_config = config["optim_config"]
     optim_config["epochs"] = config["num_epochs"]
     track = config["track"]
-    assert track in ["LA", "PA", "DF"], "Invalid track given"
+    
     if "eval_all_best" not in config:
         config["eval_all_best"] = "True"
     if "freq_aug" not in config:
@@ -53,15 +53,10 @@ def main(args: argparse.Namespace) -> None:
 
     # define database related paths
     output_dir = Path(args.output_dir)
-    prefix_2019 = "ASVspoof2019.{}".format(track)
-    database_path = Path(config["database_path"])
-    dev_trial_path = (database_path /
-                      "ASVspoof2019_{}_cm_protocols/{}.cm.dev.trl.txt".format(
-                          track, prefix_2019))
-    eval_trial_path = (
-        database_path /
-        "ASVspoof2019_{}_cm_protocols/{}.cm.eval.trl.txt".format(
-            track, prefix_2019))
+  
+    database_path = Path(args.datapath)
+    dev_trial_path = args.dev_meta
+    eval_trial_path = args.eval_meta
 
     # define model related paths
     model_tag = "{}_{}_ep{}_bs{}".format(
@@ -88,7 +83,7 @@ def main(args: argparse.Namespace) -> None:
 
     # define dataloaders
     trn_loader, dev_loader, eval_loader = get_loader(
-        database_path, args.seed, config)
+        database_path, args.seed, args.train_meta, args.dev_meta, args.eval_meta, config)
 
     # evaluates pretrained model and exit script
     if args.eval:
@@ -223,26 +218,20 @@ def get_model(model_config: Dict, device: torch.device):
 def get_loader(
         database_path: str,
         seed: int,
+        train_meta,
+        dev_meta,
+        eval_meta,
         config: dict) -> List[torch.utils.data.DataLoader]:
     """Make PyTorch DataLoaders for train / developement / evaluation"""
-    track = config["track"]
-    prefix_2019 = "ASVspoof2019.{}".format(track)
 
-    trn_database_path = database_path / "ASVspoof2019_{}_train/".format(track)
-    dev_database_path = database_path / "ASVspoof2019_{}_dev/".format(track)
-    eval_database_path = database_path / "ASVspoof2019_{}_eval/".format(track)
-
+    trn_database_path = database_path
+    dev_database_path = database_path
+    eval_database_path = database_path
+          
     # Lấy các đường dẫn file metadata ứng với tập train, dev và eval
-    trn_list_path = (database_path /
-                     "ASVspoof2019_{}_cm_protocols/{}.cm.train.trn.txt".format(
-                         track, prefix_2019))
-    dev_trial_path = (database_path /
-                      "ASVspoof2019_{}_cm_protocols/{}.cm.dev.trl.txt".format(
-                          track, prefix_2019))
-    eval_trial_path = (
-        database_path /
-        "ASVspoof2019_{}_cm_protocols/{}.cm.eval.trl.txt".format(
-            track, prefix_2019))
+    trn_list_path = train_meta
+    dev_trial_path = dev_meta
+    eval_trial_path = eval_meta
 
     # Từ file metadata cho tập train, lấy ra danh sách các key ứng với speech và label của nó
     d_label_trn, file_train = genSpoof_list(dir_meta=trn_list_path,
@@ -384,6 +373,22 @@ if __name__ == "__main__":
                         type=int,
                         default=1234,
                         help="random seed (default: 1234)")
+    parser.add_argument("--train_meta",
+                        type=str,
+                        default="/kaggle/working/Metadata/train_meta.txt",
+                        help="dir to metadata file of train dataset")
+    parser.add_argument("--dev_meta",
+                        type=str,
+                        default="/kaggle/working/Metadata/val_meta.txt",
+                        help="dir to metadata file of validation dataset")
+    parser.add_argument("--eval_meta",
+                        type=str,
+                        default="/kaggle/working/Metadata/test_meta.txt",
+                        help="dir to metadata file of test dataset")
+    parser.add_argument("--datapath",
+                        type=str,
+                        default="/kaggle/input/vlsp2025-train/vlsp_train/home4/vuhl/VSASV-Dataset/",
+                        help = "dir to dataset")
     parser.add_argument(
         "--eval",
         action="store_true",
