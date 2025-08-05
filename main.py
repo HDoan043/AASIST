@@ -363,6 +363,8 @@ def train_epoch(
         else:
             raise ValueError("scheduler error, got:{}".format(scheduler))
 
+        avg_loss = running_loss / num_total
+
         # Cập nhật tqdm hiển thị loss
         pbar.set_postfix({"Loss": f"{avg_loss:.4f}"})
 
