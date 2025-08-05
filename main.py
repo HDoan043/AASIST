@@ -213,8 +213,8 @@ def get_model(model_config: Dict, device: torch.device, pretrain_path):
     print("no. model params:{}".format(nb_params))
 
     if len(pretrain_path) > 0:
-        model = model.load_state_dict(
-            torch.load(pretrain_path, map_location=device))
+        state_dict = torch.load(pretrain_path, map_location=device)
+        model.load_state_dict(state_dict)  # không gán lại model
 
     return model
 
