@@ -79,7 +79,7 @@ def main(args: argparse.Namespace) -> None:
         raise ValueError("GPU not detected!")
 
     # define model architecture
-    model = get_model(model_config, device)
+    model = get_model(model_config, device, args.pretrain_path)
 
     # define dataloaders
     trn_loader, dev_loader, eval_loader = get_loader(
@@ -204,13 +204,17 @@ def main(args: argparse.Namespace) -> None:
         best_eval_eer, best_eval_tdcf))
 
 
-def get_model(model_config: Dict, device: torch.device):
+def get_model(model_config: Dict, device: torch.device, pretrain_path):
     """Define DNN model architecture"""
     module = import_module("models.{}".format(model_config["architecture"]))
     _model = getattr(module, "Model")
     model = _model(model_config).to(device)
     nb_params = sum([param.view(-1).size()[0] for param in model.parameters()])
     print("no. model params:{}".format(nb_params))
+
+    if len(pretrain_path) > 0:
+        model = model.load_state_dict(
+            torch.load(pretrain_path, map_location=device))
 
     return model
 
@@ -331,10 +335,16 @@ def train_epoch(
     # set objective (Loss) functions
     weight = torch.FloatTensor([0.1, 0.9]).to(device)
     criterion = nn.CrossEntropyLoss(weight=weight)
-    for batch_x, batch_y in trn_loader:
+
+    # Thêm progress bar
+    pbar = tqdm(enumerate(trn_loader), total=len(trn_loader),
+                desc=f"Epoch {epoch:03d}", ncols=100)
+    
+    for i, (batch_x, batch_y) in pbar:
         batch_size = batch_x.size(0)
         num_total += batch_size
         ii += 1
+      
         batch_x = batch_x.to(device)
         batch_y = batch_y.view(-1).type(torch.int64).to(device)
         _, batch_out = model(batch_x, Freq_aug=str_to_bool(config["freq_aug"]))
@@ -350,6 +360,9 @@ def train_epoch(
             pass
         else:
             raise ValueError("scheduler error, got:{}".format(scheduler))
+
+        # Cập nhật tqdm hiển thị loss
+        pbar.set_postfix({"Loss": f"{avg_loss:.4f}"})
 
     running_loss /= num_total
     return running_loss
@@ -369,6 +382,10 @@ if __name__ == "__main__":
         help="output directory for results",
         default="./exp_result",
     )
+    parser.add_argument("--pretrain_path",
+                        type = str,
+                        default="",
+                        help="dir to pretrain path")
     parser.add_argument("--seed",
                         type=int,
                         default=1234,
