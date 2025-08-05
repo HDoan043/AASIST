@@ -126,7 +126,7 @@ def main(args: argparse.Namespace) -> None:
     for epoch in range(config["num_epochs"]):
         print("Start training epoch{:03d}".format(epoch))
         running_loss = train_epoch(trn_loader, model, optimizer, device,
-                                   scheduler, config)
+                                   scheduler, config, epoch)
         produce_evaluation_file(dev_loader, model, device,
                                 metric_path/"dev_score.txt", dev_trial_path)
         dev_eer, dev_tdcf = calculate_tDCF_EER(
@@ -326,7 +326,8 @@ def train_epoch(
     optim: Union[torch.optim.SGD, torch.optim.Adam],
     device: torch.device,
     scheduler: torch.optim.lr_scheduler,
-    config: argparse.Namespace):
+    config: argparse.Namespace,
+    epoch: int= 0):
     """Train the model for one epoch"""
     running_loss = 0
     num_total = 0.0
