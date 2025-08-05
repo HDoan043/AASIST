@@ -9,7 +9,7 @@ def calculate_EER_only(cm_scores_file, output_file, printout=True):
     cm_data = np.genfromtxt(cm_scores_file, dtype=str)
     cm_sources = cm_data[:, 1]
     cm_keys = cm_data[:, 2]
-    cm_scores = cm_data[:, 3].astype(np.float)
+    cm_scores = cm_data[:, 3].astype(float)
 
     # Extract bona fide và spoof scores
     bona_cm = cm_scores[cm_keys == 'bonafide']
