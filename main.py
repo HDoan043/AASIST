@@ -286,6 +286,9 @@ def get_loader(
                              shuffle=False,
                              drop_last=False,
                              pin_memory=True)
+    print(f"[DEBUG] Train dataset size: {len(trn_loader.dataset)}")
+    print(f"[DEBUG] Dev dataset size: {len(dev_loader.dataset)}")
+    print(f"[DEBUG] Eval dataset size: {len(eval_loader.dataset)}")
 
     return trn_loader, dev_loader, eval_loader
 
