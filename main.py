@@ -28,6 +28,7 @@ from evaluation import calculate_tDCF_EER
 from utils import create_optimizer, seed_worker, set_seed, str_to_bool
 
 from tqdm import tqdm
+import pickle
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -89,9 +90,8 @@ def main(args: argparse.Namespace) -> None:
     model = get_model(model_config, device, args.pretrain_path)
 
     # define dataloaders
-    trn_loader, dev_loader, eval_loader = get_loader(
-        database_path, args.seed, config)
-
+    trn_loader, dev_loader, eval_loader, infer_loader = get_loader(
+        database_path, args.seed, args.infer_meta, args.infer_path, config)
     # evaluates pretrained model and exit script
     if args.eval:
         model.load_state_dict(
@@ -111,6 +111,27 @@ def main(args: argparse.Namespace) -> None:
             output_file=model_tag/"loaded_model_t-DCF_EER.txt")
         sys.exit(0)
 
+    if args.infer:
+        model.load_state_dict(
+            torch.load(config["model_path"], map_location=device))
+        print("Model loaded : {}".format(config["model_path"]))
+        print("Start inference...")
+        score_list = []
+        model.eval()
+        for batch_x, _ in infer_loader:
+            batch_x = batch_x.to(device)
+            with torch.no_grad():
+                _, batch_out = model(batch_x)
+                batch_score = (batch_out[:, 1]).data.cpu().numpy().ravel()
+            # add outputs
+            score_list.extend(batch_score.tolist())
+
+        print("SAVING SCORE EMBEDDING...")
+        with open(args.output_infer, "wb") as f:
+            pickle.dump(score_list, f)
+        print("FINISHING SAVING EMBEDIDNG SCORE!!")
+        sys.exit(0)
+        
     # get optimizer and scheduler
     optim_config["steps_per_epoch"] = len(trn_loader)
     optimizer, scheduler = create_optimizer(model.parameters(), optim_config)
@@ -230,6 +251,8 @@ def get_model(model_config: Dict, device: torch.device, pretrain_path = ""):
 def get_loader(
         database_path: str,
         seed: int,
+        infer_meta,
+        infer_path,
         config: dict) -> List[torch.utils.data.DataLoader]:
     """Make PyTorch DataLoaders for train / developement / evaluation"""
     track = config["track"]
@@ -250,6 +273,25 @@ def get_loader(
         database_path /
         "ASVspoof2019_{}_cm_protocols/{}.cm.eval.trl.txt".format(
             track, prefix_2019))
+
+    # Từ file metadata cho tập infer, lấy ra danh sách các key của utterances
+    list_infer_id = []
+    with open(infer_meta, "r") as f:
+        for line in f:
+            key1, key2 = line.split()
+            list_infer_id.append(key1)
+            list_infer_id.append(key2)
+
+    infer_set = Dataset_ASVspoof2019_devNeval(list_IDs=list_infer_id,
+                                            base_dir=infer_path)
+
+    infer_loader = DataLoader(train_set,
+                            batch_size=config["batch_size"],
+                            shuffle=False,
+                            drop_last=False,
+                            pin_memory=True,
+                            worker_init_fn=seed_worker,
+                            generator=gen)
 
     # Từ file metadata cho tập train, lấy ra danh sách các key ứng với speech và label của nó
     d_label_trn, file_train = genSpoof_list(dir_meta=trn_list_path,
@@ -300,7 +342,7 @@ def get_loader(
                              drop_last=False,
                              pin_memory=True)
 
-    return trn_loader, dev_loader, eval_loader
+    return trn_loader, dev_loader, eval_loader, infer_loader
 
 
 def produce_evaluation_file(
@@ -408,6 +450,26 @@ if __name__ == "__main__":
         "--eval",
         action="store_true",
         help="when this flag is given, evaluates given model and exit")
+
+    parser.add_argument(
+        "--infer",
+        action="store_true",
+        help="when this flag is given, inference given model and exit")
+    )
+    parser.add_argument(
+        "--infer_meta",
+        type=str,
+        default = "/kaggle/working/output/AASIST/eval_meta.txt"
+    )
+    parser.add_argument(
+        "--infer_path",
+        type = str,
+        default = "/kaggle/input/vlsp2025_public_test/"
+    )
+    parser.add_argument(
+        "--output_infer",
+        type = str
+    )
     parser.add_argument("--comment",
                         type=str,
                         default=None,
