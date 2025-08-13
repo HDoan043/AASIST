@@ -82,6 +82,18 @@ def main(args: argparse.Namespace) -> None:
     # define model architecture
     model = get_model(model_config, device, args.pretrain_path)
 
+    if args.infer:
+        model.load_state_dict(
+            torch.load(args.pretrain_path, map_location=device))
+        print("Model loaded : {}".format(args.pretrain_path)]))
+        infer_loader = get_infer_loader( args.infer_meta, config)
+        print("Start evaluation...")
+        produce_evaluation_file(infer_loader, model, device,
+                                args.infer_output, args.infer_meta)
+        print("Finish saving scores")
+
+        sys.exit(0)
+
     # define dataloaders
     trn_loader, dev_loader, eval_loader = get_loader(
         database_path, args.seed, args.train_meta, args.dev_meta, args.eval_meta, config)
@@ -241,7 +253,7 @@ def get_loader(
     # Từ file metadata cho tập train, lấy ra danh sách các key ứng với speech và label của nó
     d_label_trn, file_train = genSpoof_list(dir_meta=trn_list_path,
                                             is_train=True,
-                                            is_eval=False)
+                                            is_eval=False, is_infer= False)
     print("no. training files:", len(file_train))
 
     # Từ danh sách lấy được, lập ra Dataset
@@ -263,7 +275,8 @@ def get_loader(
     # Lấy danh sách các key và label của các speech
     _, file_dev = genSpoof_list(dir_meta=dev_trial_path,
                                 is_train=False,
-                                is_eval=False)
+                                is_eval=False,
+                                is_infer=False)
     print("no. validation files:", len(file_dev))
 
     # Từ danh sách lấy được, lập ra Dataset
@@ -278,7 +291,8 @@ def get_loader(
 
     file_eval = genSpoof_list(dir_meta=eval_trial_path,
                               is_train=False,
-                              is_eval=True)
+                              is_eval=True,
+                              is_infer=False)
     eval_set = Dataset_ASVspoof2019_devNeval(list_IDs=file_eval,
                                              base_dir=eval_database_path)
     eval_loader = DataLoader(eval_set,
@@ -292,7 +306,23 @@ def get_loader(
 
     return trn_loader, dev_loader, eval_loader
 
-
+def get_infer_loader(
+    infer_meta,
+    config
+):
+    file_list = getSpoof_list(dir_meta=infer_meta,
+                             is_train=False,
+                              is_eval=False,
+                              is_infer=True))
+    infer_dataset = Dataset_ASVspoof2019_devNeval(list_IDs=file_eval,
+                                             base_dir="")
+    infer_loader = DataLoader(infer_dataset,
+                             batch_size=config["batch_size"],
+                             shuffle=False,
+                             drop_last=False,
+                             pin_memory=True)
+    return infer_loader
+  
 def produce_evaluation_file(
     data_loader: DataLoader,
     model,
@@ -301,11 +331,14 @@ def produce_evaluation_file(
     trial_path: str) -> None:
     """Perform evaluation and save the score to a file"""
     model.eval()
-    with open(trial_path, "r") as f_trl:
-        trial_lines = f_trl.readlines()
     fname_list = []
     score_list = []
-    for batch_x, utt_id in data_loader:
+
+    # Thêm progress bar
+    pbar = tqdm(enumerate(trn_loader), total=len(trn_loader),
+                desc=f"Epoch {epoch:03d}", ncols=100)
+      
+    for _, (batch_x, utt_id) in pbar:
         batch_x = batch_x.to(device)
         with torch.no_grad():
             _, batch_out = model(batch_x)
@@ -316,10 +349,8 @@ def produce_evaluation_file(
 
     assert len(trial_lines) == len(fname_list) == len(score_list)
     with open(save_path, "w") as fh:
-        for fn, sco, trl in zip(fname_list, score_list, trial_lines):
-            _, utt_id, _, src, key = trl.strip().split(' ')
-            assert fn == utt_id
-            fh.write("{} {} {} {}\n".format(utt_id, src, key, sco))
+        for fn, sco in zip(fname_list, score_list):
+            fh.write("{} {} {} {}\n".format(fn, sco))
     print("Scores saved to {}".format(save_path))
 
 
@@ -415,14 +446,27 @@ if __name__ == "__main__":
                         type=str,
                         default="/kaggle/working/Metadata/test_meta.txt",
                         help="dir to metadata file of test dataset")
+    parser.add_argument("--infer_meta",
+                        type=str,
+                        default="/kaggle/working/Metadata/infer_meta.txt",
+                        help="dir to metadata file of test dataset")
     parser.add_argument("--datapath",
                         type=str,
                         default="/kaggle/input/vlsp2025-train/vlsp_train/home4/vuhl/VSASV-Dataset/",
                         help = "dir to dataset")
+    parser.add_argument("--infer_output",
+                        type=str,
+                        default="/kaggle/working/output/AASIST/",
+                        help = "dir to output folder after inference")
     parser.add_argument(
         "--eval",
         action="store_true",
         help="when this flag is given, evaluates given model and exit")
+    parser.add_argument(
+        "--infer",
+        action="store_true",
+        help="when this flag is given, evaluates given model and exit")
+    
     parser.add_argument("--comment",
                         type=str,
                         default=None,
