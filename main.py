@@ -310,7 +310,7 @@ def get_infer_loader(
     infer_meta,
     config
 ):
-    file_list = getSpoof_list(dir_meta=infer_meta,
+    file_list = genSpoof_list(dir_meta=infer_meta,
                              is_train=False,
                               is_eval=False,
                               is_infer=True)
