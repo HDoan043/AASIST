@@ -85,7 +85,7 @@ def main(args: argparse.Namespace) -> None:
     if args.infer:
         model.load_state_dict(
             torch.load(args.pretrain_path, map_location=device))
-        print("Model loaded : {}".format(args.pretrain_path)]))
+        print("Model loaded : {}".format(args.pretrain_path)))
         infer_loader = get_infer_loader( args.infer_meta, config)
         print("Start evaluation...")
         produce_evaluation_file(infer_loader, model, device,
