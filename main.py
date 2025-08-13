@@ -23,7 +23,8 @@ from torch.utils.tensorboard import SummaryWriter
 from torchcontrib.optim import SWA
 
 from data_utils import (Dataset_ASVspoof2019_train,
-                        Dataset_ASVspoof2019_devNeval, genSpoof_list)
+                        Dataset_ASVspoof2019_devNeval, 
+                        Dataset_inference, genSpoof_list)
 from evaluation import calculate_EER_only
 from utils import create_optimizer, seed_worker, set_seed, str_to_bool
 from tqdm import tqdm
@@ -314,8 +315,7 @@ def get_infer_loader(
                              is_train=False,
                               is_eval=False,
                               is_infer=True)
-    infer_dataset = Dataset_ASVspoof2019_devNeval(list_IDs=file_list,
-                                             base_dir="")
+    infer_dataset = Dataset_inference(list_IDs=file_list)
     infer_loader = DataLoader(infer_dataset,
                              batch_size=config["batch_size"],
                              shuffle=False,
