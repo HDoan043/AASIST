@@ -313,7 +313,7 @@ def get_infer_loader(
     file_list = getSpoof_list(dir_meta=infer_meta,
                              is_train=False,
                               is_eval=False,
-                              is_infer=True))
+                              is_infer=True)
     infer_dataset = Dataset_ASVspoof2019_devNeval(list_IDs=file_eval,
                                              base_dir="")
     infer_loader = DataLoader(infer_dataset,
