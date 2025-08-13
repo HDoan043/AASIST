@@ -90,7 +90,7 @@ def main(args: argparse.Namespace) -> None:
         infer_loader = get_infer_loader( args.infer_meta, config)
         print("Start evaluation...")
         produce_evaluation_file(infer_loader, model, device,
-                                args.infer_output, args.infer_meta)
+                                args.infer_output)
         print("Finish saving scores")
 
         sys.exit(0)
@@ -106,7 +106,7 @@ def main(args: argparse.Namespace) -> None:
         print("Model loaded : {}".format(config["model_path"]))
         print("Start evaluation...")
         produce_evaluation_file(eval_loader, model, device,
-                                eval_score_path, eval_trial_path)
+                                eval_score_path)
         eval_eer = calculate_EER_only(
             cm_scores_file=eval_score_path,
             output_file=model_tag / "EER.txt" )
@@ -132,7 +132,7 @@ def main(args: argparse.Namespace) -> None:
     print("\n[INFO] Running dry-run check...")
     try:
         _ = train_epoch(trn_loader, model, optimizer, device, scheduler, config, epoch=0, dry_run = True)  # bạn có thể giới hạn batch bên trong train_epoch nếu muốn nhanh
-        produce_evaluation_file(dev_loader, model, device, metric_path / "dryrun_dev_score.txt", dev_trial_path)
+        produce_evaluation_file(dev_loader, model, device, metric_path / "dryrun_dev_score.txt")
         _ = calculate_EER_only(
             cm_scores_file=metric_path / "dryrun_dev_score.txt",
             output_file=metric_path / "dryrun_dev_EER.txt",
@@ -150,7 +150,7 @@ def main(args: argparse.Namespace) -> None:
         running_loss = train_epoch(trn_loader, model, optimizer, device,
                                    scheduler, config, epoch)
         produce_evaluation_file(dev_loader, model, device,
-                                metric_path/"dev_score.txt", dev_trial_path)
+                                metric_path/"dev_score.txt")
         dev_eer = calculate_EER_only(
             cm_scores_file=metric_path/"dev_score.txt", 
             output_file=metric_path/"dev_EER_{:03d}.txt".format(epoch),
@@ -172,7 +172,7 @@ def main(args: argparse.Namespace) -> None:
             # do evaluation whenever best model is renewed
             if str_to_bool(config["eval_all_best"]):
                 produce_evaluation_file(eval_loader, model, device,
-                                        eval_score_path, eval_trial_path)
+                                        eval_score_path)
                 eval_eer = calculate_EER_only(
                     cm_scores_file=eval_score_path,
                     output_file=metric_path /
@@ -197,8 +197,7 @@ def main(args: argparse.Namespace) -> None:
     if n_swa_update > 0:
         optimizer_swa.swap_swa_sgd()
         optimizer_swa.bn_update(trn_loader, model, device=device)
-    produce_evaluation_file(eval_loader, model, device, eval_score_path,
-                            eval_trial_path)
+    produce_evaluation_file(eval_loader, model, device, eval_score_path)
     eval_eer = calculate_EER_only(
         cm_scores_file=eval_score_path,
         output_file=model_tag / "final_eval_EER.txt")
@@ -327,15 +326,14 @@ def produce_evaluation_file(
     data_loader: DataLoader,
     model,
     device: torch.device,
-    save_path: str,
-    trial_path: str) -> None:
+    save_path: str) -> None:
     """Perform evaluation and save the score to a file"""
     model.eval()
     fname_list = []
     score_list = []
 
     # Thêm progress bar
-    pbar = tqdm(enumerate(data_loader), total=len(data_loader), ncols=200)
+    pbar = tqdm(enumerate(data_loader), total=len(data_loader), ncols=100)
       
     for _, (batch_x, utt_id) in pbar:
         batch_x = batch_x.to(device)
@@ -346,10 +344,9 @@ def produce_evaluation_file(
         fname_list.extend(utt_id)
         score_list.extend(batch_score.tolist())
 
-    assert len(trial_lines) == len(fname_list) == len(score_list)
     with open(save_path, "w") as fh:
         for fn, sco in zip(fname_list, score_list):
-            fh.write("{} {} {} {}\n".format(fn, sco))
+            fh.write("{} {}\n".format(fn, sco))
     print("Scores saved to {}".format(save_path))
 
 
