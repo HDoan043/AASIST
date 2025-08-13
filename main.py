@@ -314,7 +314,7 @@ def get_infer_loader(
                              is_train=False,
                               is_eval=False,
                               is_infer=True)
-    infer_dataset = Dataset_ASVspoof2019_devNeval(list_IDs=file_eval,
+    infer_dataset = Dataset_ASVspoof2019_devNeval(list_IDs=file_list,
                                              base_dir="")
     infer_loader = DataLoader(infer_dataset,
                              batch_size=config["batch_size"],
