@@ -31,8 +31,9 @@ def genSpoof_list(dir_meta, is_train=False, is_eval=False, is_infer = False):
 
     elif is_infer:
         for line in l_meta:
-            utt1, utt2, label = line.strip().split(" ")
-            file_list.append((utt1, utt2))
+            tem = line.strip().split(" ")
+            file_list.append(tem[0])
+            file_list.append(tem[1])
         return file_list
         
     else:
@@ -104,23 +105,3 @@ class Dataset_ASVspoof2019_devNeval(Dataset):
         X_pad = pad(X, self.cut)
         x_inp = Tensor(X_pad)
         return x_inp, key
-
-class Dataset_inference(Dataset):
-    def __init__(self, list_IDs):
-        """self.list_IDs	: list of tuple (each tuple: (utt1, utt2)),
-        """
-        self.list_IDs = list_IDs
-        self.cut = 64600  # take ~4 sec audio (64600 samples)
-
-    def __len__(self):
-        return len(self.list_IDs)
-
-    def __getitem__(self, index):
-        utt1, utt2 = self.list_IDs[index]
-        X1, _ = sf.read(utt1)
-        X2, _ = sf.read(utt2)
-        X1_pad = pad(X1, self.cut)
-        X2_pad = pad(X2, self.cut)
-        x1_inp = Tensor(X1_pad)
-        x2_inp = Tensor(X2_pad)
-        return x1_inp, x2_inp
