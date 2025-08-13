@@ -9,6 +9,44 @@ import sys
 import numpy as np
 import torch
 
+def infer_collate_fn(batch):
+    '''
+    Receive batch of utterance pairs 
+    Define how samples in a batch should be get
+    ( By default: when initialize a new DataLoader from a Dataset object, 
+    samples in a batch will be get be the function _get-item_ in class Dataset,
+    If you do not want to get the sample by this way, you can define a new way to get batch data
+    through a function like infer_collate_fn and pass it into the parameter collate_fn when initializing a DataLoader)
+    '''
+    id = []
+    flatten = []
+    idx_pair = 0
+    for utt1, utt2 in batch:
+        flatten.append(utt1)
+        id.append(idx_pair)
+
+        flatten.append(utt2)
+        id.append(idx_pair)
+
+        idx_pair += 1
+
+    return torch.stack(flatten), torch.stack(id)
+
+def group_result(batch_output, batch_id):
+    '''
+    The input batch includes pairs of utterances, 
+    but they are flatten when loading batch( in function infer_collate_fn).
+    The flatten batch is passed into model for inference, and the output is a flatten batch too.
+    To ensure the original structure of the data which contains pairs of speeches instead of single flatten batch,
+    I need to group them again.
+    '''
+    batch_group = {}
+    for result, id in zip(batch_output, batch_id)
+        if id not in batch_group:
+            batch_group[id] = (result)
+        else:
+            batch_group[id] = batch_group[id] + (result,)
+    return torch.stack(batch_group.values())
 
 def str_to_bool(val):
     """Convert a string representation of truth to true (1) or false (0).
