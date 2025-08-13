@@ -335,8 +335,7 @@ def produce_evaluation_file(
     score_list = []
 
     # Thêm progress bar
-    pbar = tqdm(enumerate(trn_loader), total=len(trn_loader),
-                desc=f"Epoch {epoch:03d}", ncols=100)
+    pbar = tqdm(enumerate(data_loader), total=len(data_loader), ncols=200)
       
     for _, (batch_x, utt_id) in pbar:
         batch_x = batch_x.to(device)
