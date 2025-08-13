@@ -32,7 +32,6 @@ def genSpoof_list(dir_meta, is_train=False, is_eval=False, is_infer = False):
     elif is_infer:
         for line in l_meta:
             tem = line.strip().split(" ")
-            file_list.append(tem[0])
             file_list.append(tem[1])
         return file_list
         
